@@ -1,0 +1,10 @@
+{
+    "name":"key",
+    "x": 3,
+    "isOn": true,
+    "things": ["x", "y", "z"],
+    "person": [{
+        "name": "Dylan",
+        "age": 19
+    }]
+}

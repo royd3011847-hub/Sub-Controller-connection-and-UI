@@ -1,0 +1,11 @@
+{
+    "cSpell.words": [
+        "GOOOO",
+        "SUBSEA",
+        "vdiv",
+        "vpitch",
+        "vroll",
+        "vyaw"
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:system"
+}
