@@ -1,4 +1,4 @@
-from Theme import COLORS
+
 from main import *
 from header import *
 

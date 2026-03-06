@@ -1,7 +1,6 @@
 from concurrent.futures import process
 
 from header import *
-from Theme import *
 
 
 class ControllerPanel(QWidget):

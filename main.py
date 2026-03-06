@@ -4,11 +4,12 @@ PyQt6-based ground control station
 Communicates with sub over Ethernet
 """
 
-from Theme import *
+
 from Connection import * 
 from IMUDisplay import *
 from controllerPanel import *
 from header import *
+from joystickPyQt6 import ControllerWindow
 from logPanel import *
 from textInput import *
 
@@ -111,8 +112,7 @@ class SubmarineController(QMainWindow):
 
         
         # -- Controller page
-        self._controller_panel = ControllerPanel()
-        self._controller_panel.command_ready.connect(self._on_command)
+        self._controller_panel = ControllerWindow()
 
         left_layout.addWidget(self._controller_panel)
         
@@ -223,6 +223,7 @@ def main():
     window = SubmarineController()
     window.show()
     sys.exit(app.exec())
+    
 
 
 if __name__ == "__main__":
