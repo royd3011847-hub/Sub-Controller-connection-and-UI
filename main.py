@@ -4,7 +4,6 @@ PyQt6-based ground control station
 Communicates with sub over Ethernet
 """
 
-
 from Connection import * 
 from IMUDisplay import *
 from controllerPanel import *
@@ -12,6 +11,8 @@ from header import *
 from joystickPyQt6 import ControllerWindow
 from logPanel import *
 from textInput import *
+from CommandPanel import *
+
 
 
 # main windows
@@ -21,11 +22,15 @@ class SubmarineController(QMainWindow):
         self.setWindowTitle("TIGER FISH LETS GOOOO!!!")
         self.resize(1200, 820)
         self.setMinimumSize(900, 640)
+        self.host = "0.0.0.0"
+        self.port = 5000
+        self.base_url = f"http://{self.host}:{self.port}"
+        self.inputDict = {}
 
-        self._worker: ConnectionWorker | None = None
 
         self._build_ui()
         self.setStyleSheet(STYLESHEET)
+        self._telemetry
 
     # ── UI BUILD ──────────────────────────────
     def _build_ui(self):
@@ -64,7 +69,7 @@ class SubmarineController(QMainWindow):
         self._btn_connect = QPushButton("CONNECT")
         self._btn_connect.setObjectName("btn_connect")
         self._btn_connect.setFixedHeight(40)
-        self._btn_connect.clicked.connect(self._connect)
+        self._btn_connect.clicked.connect(self.host_changed)
         conn_layout.addWidget(self._btn_connect)
 
         conn_layout.addSpacing(8)
@@ -116,7 +121,6 @@ class SubmarineController(QMainWindow):
 
         left_layout.addWidget(self._controller_panel)
         
-        
         # RIGHT: telemetry display
         right = QWidget()
         right_layout = QVBoxLayout(right)
@@ -130,7 +134,9 @@ class SubmarineController(QMainWindow):
         self._log = LogPanel()
         right_layout.addWidget(self._log)
         
-
+        self.commands = CommandPanel()
+        right_layout.addWidget(self.commands)
+        
         splitter.addWidget(left)
 
         # Timestamp of last packet
@@ -158,43 +164,64 @@ class SubmarineController(QMainWindow):
 
 
     # ── CONNECT / DISCONNECT ──────────────────
-    def _connect(self):
+    def host_changed(self):
         host = self._host_input.text().strip()
-        host = self._host_input.text().strip()
-        self._worker = ConnectionWorker(host)
+        self.host = host
+        self.base_url = f"http://{self.host}:{self.port}"
+        self._controller_panel.set_base_url(self.base_url)
         self._log.append(f"Connecting to {host}...", "info")
+        
+    def get_url(self):
+        return self.base_url
     
     def _kill_sub(self):
         payload = {"mode": "kill"}
         self._log.append("KILL SIGNAL SENT — submarine powering off", "err")
-        if self._worker:
-            self._worker.send(payload)
+   
 
     # ── COMMAND SEND ──────────────────────────
     def _on_command(self, payload: dict):
         # If command came from TextInput, it's a string
         if isinstance(payload, str):
-            cmd = payload.strip()
+            cmd = payload.strip().lower()
 
             # local command
             if cmd == "clear":
                 self.clear_log()
                 return
+            
+            if cmd == "start telemetry":
+                self._telemetry = TelemetryDisplay(get_url=self.get_url)
+                self._log.append("Telemetry started", "info")
+                return
+
+            if cmd == "stop telemetry":
+                self._telemetry.stop_worker()
+                self._log.append("Telemetry stopped", "info")
+                return
 
             # convert to structured dict for sending
             payload = {"command": cmd}
-
+        
+        url = self.base_url + "/command_publisher"
+        if self.base_url:      # <-- only send if connected
+            try:
+                requests.post(url, json=payload, timeout=0.5)
+            except requests.exceptions.RequestException:
+                pass 
         msg = json.dumps(payload)
         self._log.append(f"command → {msg}", "send")
 
-        if self._worker:
-            self._worker.send(payload)
 
     # ── TELEMETRY RECEIVE ─────────────────────
     def _on_telemetry(self, data: dict):
         self._telemetry.update_values(data)
         ts = datetime.now().strftime("%H:%M:%S.%f")[:-3]
         self._last_update_lbl.setText(f"LAST UPDATE: {ts}")
+        
+    def closeEvent(self, event):
+        self._telemetry.stop_worker()
+        super().closeEvent(event)
         
     def clear_log(self):
         self._log.clear()
