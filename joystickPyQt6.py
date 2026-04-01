@@ -56,10 +56,8 @@ class JoystickWidget(QFrame):
             lbl.setFont(QFont("Courier New", 11))
             self.layout_.addWidget(lbl)
             self.hat_labels.append(lbl)
-
-    def refresh(self):
-        joy = self.joystick
-        
+    
+    def updateAxisDisplay(self, joy):
         for i, lbl in enumerate(self.axis_labels):
             val = joy.get_axis(i)
             if(i == 0):
@@ -77,7 +75,8 @@ class JoystickWidget(QFrame):
             lbl.setStyleSheet(
                 f"background: {COLORS['bg_card']}; "
             )
-       
+    
+    def updateButtonDisplay(self, joy):
         for i, lbl in enumerate(self.button_labels):
             val = joy.get_button(i)
             if(i == 0):
@@ -110,8 +109,14 @@ class JoystickWidget(QFrame):
                 lbl.setText(f"  D-pad left button value: \t\t{val}")
             if(i == 14):
                 lbl.setText(f"  D-pad right button value: \t\t{val}")
-                
             lbl.setStyleSheet(f"background: {COLORS['bg_card']}; ")
+
+    def refresh(self):
+        joy = self.joystick
+        
+        self.updateAxisDisplay(joy)
+
+        self.updateButtonDisplay(joy)
 
 
 
@@ -122,7 +127,7 @@ class ControllerWindow(QWidget):
         self.setWindowTitle("Joystick Monitor")
         self.resize(500, 700)
 
-        self.inputDict = {        # <-- add this
+        self.inputDict = {       
             "x_left_stick": 0.0,
             "y_left_stick": 0.0,
             "x_right_stick": 0.0,
@@ -174,9 +179,73 @@ class ControllerWindow(QWidget):
     
     def set_base_url(self, url):
         self.base_url = url
+        
+    def buttonDownUpdate(self, event):
+        if(0 == event.button):
+            self.inputDict["a_button"] = True
+        elif(1 == event.button):
+            self.inputDict["b_button"] = True
+        elif(2 == event.button):
+            self.inputDict["x_button"] = True
+        elif(3 == event.button):
+            self.inputDict["y_button"] = True
+        elif(9 == event.button):
+            self.inputDict["l_bumper"] = True
+        elif(10 == event.button):
+            self.inputDict["l_bumper"] = True
+        elif(11 == event.button):
+            self.inputDict["up_dpad"] = True
+        elif(12 == event.button):
+            self.inputDict["down_dpad"] = True
+        elif(13 == event.button):
+            self.inputDict["left_dpad"] = True
+        elif(14 == event.button):
+            self.inputDict["right_dpad"] = True
+        else:
+            print(f"Button {event.button} pressed on joystick {event.instance_id} not mapped to inputDict")
+            
+    def buttonUpUpdate(self, event):
+        if(0 == event.button):
+            self.inputDict["a_button"] = False
+        elif(1 == event.button):
+            self.inputDict["b_button"] = False
+        elif(2 == event.button):
+            self.inputDict["x_button"] = False
+        elif(3 == event.button):
+            self.inputDict["y_button"] = False
+        elif(9 == event.button):
+            self.inputDict["l_bumper"] = False
+        elif(10 == event.button):
+            self.inputDict["l_bumper"] = False
+        elif(11 == event.button):
+            self.inputDict["up_dpad"] = False
+        elif(12 == event.button):
+            self.inputDict["down_dpad"] = False
+        elif(13 == event.button):
+            self.inputDict["left_dpad"] = False
+        elif(14 == event.button):
+            self.inputDict["right_dpad"] = False
+        else:
+            print(f"Button {event.button} released on joystick {event.instance_id} not mapped to inputDict")
+    
+    def updateAxis(self, event):
+        if(0 == event.axis):
+            self.inputDict["x_left_stick"] = event.value
+        elif(1 == event.axis):
+            self.inputDict["y_left_stick"] = event.value
+        elif(2 == event.axis):
+            self.inputDict["x_right_stick"] = event.value
+        elif(3 == event.axis):
+            self.inputDict["y_right_stick"] = event.value
+        elif(4 == event.axis):
+            self.inputDict["l_trigger"] = event.value
+        elif(5 == event.axis):
+            self.inputDict["r_trigger"] = event.value
+        else:
+            print(f"Axis {event.axis} moved to {event.value:.3f} on joystick {event.instance_id} not mapped to inputDict")
 
     def poll(self):
-        #print(json.dumps(self.inputDict, indent=2)) 
+        print(json.dumps(self.inputDict, indent=2)) 
         
         if self.base_url:      # <-- only send if connected
             try:
@@ -184,7 +253,6 @@ class ControllerWindow(QWidget):
             except requests.exceptions.RequestException:
                 print("Failed to send controller input to: " + self.base_url)
                 pass
-            
 
         
         for event in pygame.event.get():
@@ -192,11 +260,14 @@ class ControllerWindow(QWidget):
             if event.type == pygame.JOYDEVICEADDED:
                 joy = pygame.joystick.Joystick(event.device_index)
                 iid = joy.get_instance_id()
-                if(joy.get_axis(5) != 0.0):
-                    self.joysticks[iid] = joy
-                    widget = JoystickWidget(joy)
-                    self.joy_widgets[iid] = widget
-                    self.scroll_layout.addWidget(widget)
+                #------
+                #if the controller is wireless, YOU DONT WANT THIS IF STATEMENT
+                #------
+                #if(joy.get_axis(5) != 0.0):
+                self.joysticks[iid] = joy
+                widget = JoystickWidget(joy)
+                self.joy_widgets[iid] = widget
+                self.scroll_layout.addWidget(widget)
                 print(f"Joystick {iid} connected: {joy.get_name()}")
                     
 
@@ -212,72 +283,13 @@ class ControllerWindow(QWidget):
 
             #BUTTON PRESSED/RELEASED type shit
             elif event.type == pygame.JOYBUTTONDOWN:
-            
-                if(0 == event.button):
-                    self.inputDict["a_button"] = True
-                elif(1 == event.button):
-                    self.inputDict["b_button"] = True
-                elif(2 == event.button):
-                    self.inputDict["x_button"] = True
-                elif(3 == event.button):
-                    self.inputDict["y_button"] = True
-                elif(9 == event.button):
-                    self.inputDict["l_bumper"] = True
-                elif(10 == event.button):
-                    self.inputDict["l_bumper"] = True
-                elif(11 == event.button):
-                    self.inputDict["up_dpad"] = True
-                elif(12 == event.button):
-                    self.inputDict["down_dpad"] = True
-                elif(13 == event.button):
-                    self.inputDict["left_dpad"] = True
-                elif(14 == event.button):
-                    self.inputDict["right_dpad"] = True
-                else:
-                    print(f"Button {event.button} pressed on joystick {event.instance_id} not mapped to inputDict")
-                
+                self.buttonDownUpdate(event)
 
             elif event.type == pygame.JOYBUTTONUP:
-
-                if(0 == event.button):
-                    self.inputDict["a_button"] = False
-                elif(1 == event.button):
-                    self.inputDict["b_button"] = False
-                elif(2 == event.button):
-                    self.inputDict["x_button"] = False
-                elif(3 == event.button):
-                    self.inputDict["y_button"] = False
-                elif(9 == event.button):
-                    self.inputDict["l_bumper"] = False
-                elif(10 == event.button):
-                    self.inputDict["l_bumper"] = False
-                elif(11 == event.button):
-                    self.inputDict["up_dpad"] = False
-                elif(12 == event.button):
-                    self.inputDict["down_dpad"] = False
-                elif(13 == event.button):
-                    self.inputDict["left_dpad"] = False
-                elif(14 == event.button):
-                    self.inputDict["right_dpad"] = False
-                else:
-                    print(f"Button {event.button} released on joystick {event.instance_id} not mapped to inputDict")
+                self.buttonUpUpdate(event)
                     
             elif event.type == pygame.JOYAXISMOTION:
-                
-                if(0 == event.axis):
-                    self.inputDict["x_left_stick"] = event.value
-                elif(1 == event.axis):
-                    self.inputDict["y_left_stick"] = event.value
-                elif(2 == event.axis):
-                    self.inputDict["x_right_stick"] = event.value
-                elif(3 == event.axis):
-                    self.inputDict["y_right_stick"] = event.value
-                elif(4 == event.axis):
-                    self.inputDict["l_trigger"] = event.value
-                elif(5 == event.axis):
-                    self.inputDict["r_trigger"] = event.value
-                else:
-                    print(f"Axis {event.axis} moved to {event.value:.3f} on joystick {event.instance_id} not mapped to inputDict")
+                self.updateAxis(event)
 
         # Update count label
         self.count_label.setText(f"Number of joysticks: {pygame.joystick.get_count()}")
