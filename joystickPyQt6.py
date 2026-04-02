@@ -245,7 +245,7 @@ class ControllerWindow(QWidget):
             print(f"Axis {event.axis} moved to {event.value:.3f} on joystick {event.instance_id} not mapped to inputDict")
 
     def poll(self):
-        print(json.dumps(self.inputDict, indent=2)) 
+        # print(json.dumps(self.inputDict, indent=2)) 
         
         if self.base_url:      # <-- only send if connected
             try:

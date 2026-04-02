@@ -1,8 +1,5 @@
 from header import *
 
-
-
-
 class ConnectionWorker(QObject):
     connected = pyqtSignal()
     
@@ -11,6 +8,4 @@ class ConnectionWorker(QObject):
         super().__init__()
         self._host = host
         print("trying to connect to", host)
-        
-        
         

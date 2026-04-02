@@ -1,16 +1,11 @@
 from header import *
 
 
-# ─────────────────────────────────────────────
-#  AVAILABLE COMMANDS
-#  Add new commands here — UI updates automatically
-# ─────────────────────────────────────────────
 COMMANDS = [
     "clear",
-    "start telemetry",
-    "stop telemetry",
+    "start telemetry (tel)",
+    "stop telemetry (-tel)",
 ]
-
 
 class CommandPanel(QGroupBox):
     def __init__(self, parent=None):

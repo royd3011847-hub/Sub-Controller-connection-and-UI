@@ -12,7 +12,7 @@ from joystickPyQt6 import ControllerWindow
 from logPanel import *
 from textInput import *
 from CommandPanel import *
-
+from Boxes import *
 
 
 # main windows
@@ -31,6 +31,7 @@ class SubmarineController(QMainWindow):
         self._build_ui()
         self.setStyleSheet(STYLESHEET)
         self._telemetry
+        self._boxes
 
     # ── UI BUILD ──────────────────────────────
     def _build_ui(self):
@@ -87,7 +88,6 @@ class SubmarineController(QMainWindow):
         self._btn_kill = QPushButton("KILL")
         self._btn_kill.setFixedHeight(70)
         
-        conn_layout.addWidget(self._btn_kill)
         self._btn_kill.setStyleSheet(
             f"background: #2a0000; border: 1px solid {COLORS['danger']}; "
             f"color: {COLORS['danger']}; font-size: 11px; font-weight: bold; "
@@ -100,12 +100,29 @@ class SubmarineController(QMainWindow):
         conn_layout.addStretch()
         root.addWidget(conn_bar)
 
-        # ── MAIN CONTENT SPLITTER ─────────────
+        # MAIN CONTENT SPLITTER 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setHandleWidth(2)
         splitter.setChildrenCollapsible(False)
+        
+        # ── BOXES ────────────────
+        
+        boxes_bar = QWidget()
+        boxes_bar.setMaximumHeight(100)
+        boxes_bar.setStyleSheet(
+            f"background: {COLORS['bg_panel']}; border: 1px solid {COLORS['border']}; border-radius: 4px;"
+        )
+        
+        boxes_layout = QHBoxLayout(boxes_bar)
+        boxes_layout.setContentsMargins(12, 8, 12, 8)
+        boxes_layout.setSpacing(10)
 
-        # LEFT: mode control
+        boxes_layout.addStretch()
+        root.addWidget(boxes_bar)
+
+        self._boxes = BoxesDisplay()
+        boxes_layout.addWidget(self._boxes)
+        # ── LEFT ────────────────
         left = QWidget()
         left_layout = QVBoxLayout(left)
         left_layout.setContentsMargins(0, 0, 4, 0)
@@ -121,13 +138,14 @@ class SubmarineController(QMainWindow):
 
         left_layout.addWidget(self._controller_panel)
         
-        # RIGHT: telemetry display
+        # ── RIGHT ──────────────
         right = QWidget()
         right_layout = QVBoxLayout(right)
         right_layout.setContentsMargins(4, 0, 0, 0)
         right_layout.setSpacing(8)
 
         self._telemetry = TelemetryDisplay()
+        self._telemetry.set_url_provider(self.get_url)
         right_layout.addWidget(self._telemetry)
         
         # Log
@@ -190,12 +208,12 @@ class SubmarineController(QMainWindow):
                 self.clear_log()
                 return
             
-            if cmd == "start telemetry":
+            if cmd == "start telemetry" or cmd == "tel":
                 self._telemetry = TelemetryDisplay(get_url=self.get_url)
                 self._log.append("Telemetry started", "info")
                 return
 
-            if cmd == "stop telemetry":
+            if cmd == "stop telemetry" or cmd == "-tel":
                 self._telemetry.stop_worker()
                 self._log.append("Telemetry stopped", "info")
                 return

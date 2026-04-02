@@ -1,7 +1,5 @@
 from concurrent.futures import process
-
 from header import *
-
 
 class ControllerPanel(QWidget):
     command_ready = pyqtSignal(dict)
