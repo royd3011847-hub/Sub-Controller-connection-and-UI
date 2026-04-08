@@ -43,7 +43,7 @@ class SubmarineController(QMainWindow):
 
         # ── CONNECTION BAR ───────────────────
         conn_bar = QWidget()
-        conn_bar.setMaximumHeight(100)
+        conn_bar.setMaximumHeight(60)
         conn_bar.setStyleSheet(
             f"background: {COLORS['bg_panel']}; border: 1px solid {COLORS['border']}; border-radius: 4px;"
         )
@@ -62,14 +62,14 @@ class SubmarineController(QMainWindow):
         conn_layout.addWidget(_field_label("HOST"))
         self._host_input = QLineEdit("192.168.1.100")
         self._host_input.setFixedWidth(150)
-        self._host_input.setFixedHeight(50)
+        self._host_input.setFixedHeight(42)
         conn_layout.addWidget(self._host_input)
 
         conn_layout.addSpacing(8)
 
         self._btn_connect = QPushButton("CONNECT")
         self._btn_connect.setObjectName("btn_connect")
-        self._btn_connect.setFixedHeight(40)
+        self._btn_connect.setFixedHeight(33)
         self._btn_connect.clicked.connect(self.host_changed)
         conn_layout.addWidget(self._btn_connect)
 
@@ -86,7 +86,7 @@ class SubmarineController(QMainWindow):
         
         # KILL button
         self._btn_kill = QPushButton("KILL")
-        self._btn_kill.setFixedHeight(70)
+        self._btn_kill.setFixedHeight(40)
         
         self._btn_kill.setStyleSheet(
             f"background: #2a0000; border: 1px solid {COLORS['danger']}; "
@@ -105,23 +105,7 @@ class SubmarineController(QMainWindow):
         splitter.setHandleWidth(2)
         splitter.setChildrenCollapsible(False)
         
-        # ── BOXES ────────────────
         
-        boxes_bar = QWidget()
-        boxes_bar.setMaximumHeight(100)
-        boxes_bar.setStyleSheet(
-            f"background: {COLORS['bg_panel']}; border: 1px solid {COLORS['border']}; border-radius: 4px;"
-        )
-        
-        boxes_layout = QHBoxLayout(boxes_bar)
-        boxes_layout.setContentsMargins(12, 8, 12, 8)
-        boxes_layout.setSpacing(10)
-
-        boxes_layout.addStretch()
-        root.addWidget(boxes_bar)
-
-        self._boxes = BoxesDisplay()
-        boxes_layout.addWidget(self._boxes)
         # ── LEFT ────────────────
         left = QWidget()
         left_layout = QVBoxLayout(left)
@@ -132,6 +116,22 @@ class SubmarineController(QMainWindow):
         # Stacked pages
         self._stack = QStackedWidget()
 
+        # ── BOXES ────────────────
+        
+        boxes_bar = QWidget()
+        boxes_bar.setMinimumHeight(100)
+        boxes_bar.setStyleSheet(
+            f"background: {COLORS['bg_panel']}; border: 1px solid {COLORS['border']}; border-radius: 4px;"
+        )
+        
+        boxes_layout = QHBoxLayout(boxes_bar)
+        boxes_layout.setContentsMargins(8, 5, 8, 5)
+        boxes_layout.setSpacing(1)
+
+        left_layout.addWidget(boxes_bar)
+
+        self._boxes = BoxesDisplay()
+        boxes_layout.addWidget(self._boxes)
         
         # -- Controller page
         self._controller_panel = ControllerWindow()
@@ -143,6 +143,7 @@ class SubmarineController(QMainWindow):
         right_layout = QVBoxLayout(right)
         right_layout.setContentsMargins(4, 0, 0, 0)
         right_layout.setSpacing(8)
+        right.setMinimumHeight(520)
 
         self._telemetry = TelemetryDisplay()
         self._telemetry.set_url_provider(self.get_url)
@@ -204,25 +205,24 @@ class SubmarineController(QMainWindow):
             cmd = payload.strip().lower()
 
             # local command
-            if cmd == "clear":
-                self.clear_log()
-                return
-            
-            if cmd == "start telemetry" or cmd == "tel":
-                self._telemetry = TelemetryDisplay(get_url=self.get_url)
-                self._log.append("Telemetry started", "info")
-                return
+            match cmd:
+                case "clear":
+                    self.clear_log()
+                    return
+                case "start telemetry" | "tel":
+                    self._telemetry = TelemetryDisplay(get_url=self.get_url)
+                    self._log.append("Telemetry started", "info")
+                    return
+                case "stop telemetry" | "-tel":
+                    self._telemetry.stop_worker()
+                    self._log.append("Telemetry stopped", "info")
+                    return
+                case _:
+                    payload = {"command": cmd}
 
-            if cmd == "stop telemetry" or cmd == "-tel":
-                self._telemetry.stop_worker()
-                self._log.append("Telemetry stopped", "info")
-                return
-
-            # convert to structured dict for sending
-            payload = {"command": cmd}
         
         url = self.base_url + "/command_publisher"
-        if self.base_url:      # <-- only send if connected
+        if self.base_url:      
             try:
                 requests.post(url, json=payload, timeout=0.5)
             except requests.exceptions.RequestException:
@@ -252,7 +252,6 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Sub Control Station")
 
-    # Dark palette safety net
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.Window,      QColor(COLORS["bg_deep"]))
     palette.setColor(QPalette.ColorRole.WindowText,  QColor(COLORS["text_primary"]))

@@ -8,7 +8,10 @@ class LogPanel(QGroupBox):
         layout = QVBoxLayout(self)
         self._log = QTextEdit()
         self._log.setReadOnly(True)
-        self._log.setMaximumHeight(130)
+        
+        self._log.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._log.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
         layout.addWidget(self._log)
 
     def append(self, message: str, level: str = "info"):

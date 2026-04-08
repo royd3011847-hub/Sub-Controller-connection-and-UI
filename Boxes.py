@@ -36,42 +36,60 @@ class BoxesWorker(QThread):
         #         self.msleep(int(tick * 1000))
         #         elapsed += tick
 BOXES = [
-    ("1", "box1"),
-    ("2", "box2"),
-    ("3", "box3"),
-    ("4", "box4"),
-    ("5", "box5"),
-    ("6", "box6"),
-    ("7", "box7"),
-    ("8", "box8"),
+    ("box 1", "box1"),
+    ("box 2", "box2"),
+    ("box 3", "box3"),
+    ("box 4", "box4"),
+    ("box 5", "box5"),
+    ("box 6", "box6")
 ]
 
 class BoxesDisplay(QGroupBox):
     def __init__(self, parent=None, get_url=None):
         super().__init__("BOXES", parent)
         self._get_url = get_url
+        self._labels = {}
         self._build_ui()
-    
+
     def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setSpacing(2)
-        layout.setContentsMargins(8, 4, 8, 4)
 
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 5, 10, 5)
+        layout.setSpacing(8)
+        
         for label, name in BOXES:
-            row = QWidget()
-            row.setStyleSheet(
-                f"background: {COLORS['bg_card']}; border: 1px solid {COLORS['border']}; border-radius: 3px;"
+            cell = QWidget()
+            cell.setStyleSheet(
+            f"background: {COLORS['bg_card']}; border: 1px solid {COLORS['border']}; border-radius: 3px;"
             )
-            row_layout = QHBoxLayout(row)
-            row_layout.setContentsMargins(10, 4, 10, 4)
+            cell.setMinimumHeight(30)
+            cell_layout = QVBoxLayout(cell)
+            cell_layout.setContentsMargins(4, 2, 4, 2)
+            cell_layout.setSpacing(1)
+            
+            
+            name_lbl = QLabel(label)
+            name_lbl.setFont(QFont("Courier New", 12))
+            name_lbl.setStyleSheet(f"color: {COLORS['text_dim']}; border: none;")
+            name_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            val_lbl = QLabel("——")
+            val_lbl.setFont(QFont("Courier New", 15))
+            val_lbl.setStyleSheet(f"color: {COLORS['accent']}; border: none;")
+            val_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            val_lbl.setMinimumWidth(60)
+            
+            cell_layout.addWidget(name_lbl)
+            cell_layout.addWidget(val_lbl)
+            layout.addWidget(cell)
+            
+            self._labels[name] = val_lbl
+            
+       
 
-            lbl = QLabel(label)
-            lbl.setFont(QFont("Courier New", 11))
-            lbl.setStyleSheet(f"color: {COLORS['accent']}; border: none;")
+        
 
-            row_layout.addWidget(lbl)
-            row_layout.addStretch()
-            layout.addWidget(row)
-
-        layout.addStretch()
+    def set_value(self, name: str, value):
+        if name in self._labels:
+            self._labels[name].setText(str(value) if value is not None else "-")
     

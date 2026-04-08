@@ -92,6 +92,7 @@ class TelemetryDisplay(QGroupBox):
 
     # ── UI BUILD ─────────────────────────────
     def _build_ui(self):
+        self.setMinimumHeight(240)
         layout = QVBoxLayout(self)
         layout.setSpacing(2)
 
@@ -103,6 +104,8 @@ class TelemetryDisplay(QGroupBox):
             row_layout = QHBoxLayout(row_widget)
             row_layout.setContentsMargins(8, 4, 8, 4)
             row_layout.setSpacing(0)
+            row_widget.setMinimumHeight(28)
+            row_widget.setMaximumHeight(60)
 
             # group label
             grp_lbl = QLabel(group_name)
@@ -124,6 +127,7 @@ class TelemetryDisplay(QGroupBox):
                 cell_layout = QVBoxLayout(cell)
                 cell_layout.setContentsMargins(4, 2, 4, 2)
                 cell_layout.setSpacing(1)
+                
 
                 name_lbl = QLabel(label_text)
                 name_lbl.setFont(QFont("Courier New", 12))
