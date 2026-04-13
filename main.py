@@ -5,15 +5,16 @@ Communicates with sub over Ethernet
 """
 
 from Connection import * 
-from IMUDisplay import *
-from controllerPanel import *
+from Telemetry import *
+from ControllerDisplay import *
 from header import *
-from joystickPyQt6 import ControllerWindow
+from Controller import ControllerWindow
 from logPanel import *
 from textInput import *
-from CommandPanel import *
+from CommandList import *
 from Boxes import *
 
+BOXCOUNT = 6
 
 # main windows
 class SubmarineController(QMainWindow):
@@ -23,15 +24,13 @@ class SubmarineController(QMainWindow):
         self.resize(1200, 820)
         self.setMinimumSize(900, 640)
         self.host = "0.0.0.0"
-        self.port = 5000
+        self.port = 5001
         self.base_url = f"http://{self.host}:{self.port}"
         self.inputDict = {}
 
 
         self._build_ui()
         self.setStyleSheet(STYLESHEET)
-        self._telemetry
-        self._boxes
 
     # ── UI BUILD ──────────────────────────────
     def _build_ui(self):
@@ -60,7 +59,7 @@ class SubmarineController(QMainWindow):
             return lbl
 
         conn_layout.addWidget(_field_label("HOST"))
-        self._host_input = QLineEdit("192.168.1.100")
+        self._host_input = QLineEdit("127.0.0.1")
         self._host_input.setFixedWidth(150)
         self._host_input.setFixedHeight(42)
         conn_layout.addWidget(self._host_input)
@@ -116,7 +115,7 @@ class SubmarineController(QMainWindow):
         # Stacked pages
         self._stack = QStackedWidget()
 
-        # ── BOXES ────────────────
+        # BOXES 
         
         boxes_bar = QWidget()
         boxes_bar.setMinimumHeight(100)
@@ -130,12 +129,12 @@ class SubmarineController(QMainWindow):
 
         left_layout.addWidget(boxes_bar)
 
-        self._boxes = BoxesDisplay()
+        self._boxes = BoxesDisplay(BOXCOUNT)
+        self._boxes.set_url_provider(self.get_url)
         boxes_layout.addWidget(self._boxes)
         
-        # -- Controller page
+        # Controller page
         self._controller_panel = ControllerWindow()
-
         left_layout.addWidget(self._controller_panel)
         
         # ── RIGHT ──────────────
@@ -158,17 +157,10 @@ class SubmarineController(QMainWindow):
         
         splitter.addWidget(left)
 
-        # Timestamp of last packet
-        self._last_update_lbl = QLabel("LAST UPDATE: ——")
-        self._last_update_lbl.setStyleSheet(
-            f"color: {COLORS['text_dim']}; font-size: 9px; letter-spacing: 2px;"
-        )
-        right_layout.addWidget(self._last_update_lbl)
-        right_layout.addStretch()
-
         splitter.addWidget(right)
         splitter.setSizes([700, 480])
 
+        # splits left and right
         root.addWidget(splitter)
 
         # ── STATUS BAR ───────────────────────
@@ -176,7 +168,7 @@ class SubmarineController(QMainWindow):
         self.setStatusBar(sb)
         
         
-         # -- terminal / input box
+         # -- terminal / input box ───────────────────────
         self._text_input = TextInput()
         self._text_input.command_ready.connect(self._on_command)
         sb.addPermanentWidget(self._text_input, 1)
@@ -185,10 +177,14 @@ class SubmarineController(QMainWindow):
     # ── CONNECT / DISCONNECT ──────────────────
     def host_changed(self):
         host = self._host_input.text().strip()
-        self.host = host
+        self.host = self._host_input.text().strip()
         self.base_url = f"http://{self.host}:{self.port}"
         self._controller_panel.set_base_url(self.base_url)
-        self._log.append(f"Connecting to {host}...", "info")
+        self._log.append(f"Connecting to {host} with port {self.port}...", "info")
+        
+        #TODO
+        #add a "try" to receive a ping from the API
+        #if it can't, the connection failed
         
     def get_url(self):
         return self.base_url
@@ -199,23 +195,34 @@ class SubmarineController(QMainWindow):
    
 
     # ── COMMAND SEND ──────────────────────────
+    # runs when user types a command
     def _on_command(self, payload: dict):
         # If command came from TextInput, it's a string
         if isinstance(payload, str):
             cmd = payload.strip().lower()
 
             # local command
-            match cmd:
+            match cmd.lower():
                 case "clear":
-                    self.clear_log()
+                    self._log.clear()
                     return
                 case "start telemetry" | "tel":
-                    self._telemetry = TelemetryDisplay(get_url=self.get_url)
+                    self._telemetry.stop_worker()
+                    self._telemetry._start_worker()
                     self._log.append("Telemetry started", "info")
                     return
                 case "stop telemetry" | "-tel":
                     self._telemetry.stop_worker()
                     self._log.append("Telemetry stopped", "info")
+                    return
+                case "start boxes" | "box":
+                    self._boxes.stop_worker()
+                    self._boxes._start_worker()
+                    self._log.append("Boxes started", "info")
+                    return
+                case "stop boxes" | "-box":
+                    self._boxes.stop_worker()
+                    self._log.append("Boxes stopped", "info")
                     return
                 case _:
                     payload = {"command": cmd}
@@ -229,25 +236,14 @@ class SubmarineController(QMainWindow):
                 pass 
         msg = json.dumps(payload)
         self._log.append(f"command → {msg}", "send")
-
-
-    # ── TELEMETRY RECEIVE ─────────────────────
-    def _on_telemetry(self, data: dict):
-        self._telemetry.update_values(data)
-        ts = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        self._last_update_lbl.setText(f"LAST UPDATE: {ts}")
-        
-    def closeEvent(self, event):
-        self._telemetry.stop_worker()
-        super().closeEvent(event)
-        
-    def clear_log(self):
-        self._log.clear()
         
     def _controller_connected(self):
         self._log.append("Controller connected", "info")
         
-
+   
+    
+    
+    
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Sub Control Station")

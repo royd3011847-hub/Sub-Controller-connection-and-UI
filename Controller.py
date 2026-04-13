@@ -1,12 +1,4 @@
-import sys
-import requests
 from header import *
-from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QLabel, QScrollArea, QFrame
-)
-from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtGui import QFont
-import json
 
 #this file is for everything controller inputs
 
@@ -168,9 +160,10 @@ class ControllerWindow(QWidget):
         # --- Pygame init ---
         pygame.init()
         pygame.joystick.init()
-
-        self.joysticks = {}       # instance_id -> Joystick
-        self.joy_widgets = {}     # instance_id -> JoystickWidget
+        
+        # instance_id -> Joystick
+        self.joysticks = {} 
+        self.joy_widgets = {}
 
         # --- Poll timer ---
         self.timer = QTimer()
@@ -260,16 +253,16 @@ class ControllerWindow(QWidget):
             if event.type == pygame.JOYDEVICEADDED:
                 joy = pygame.joystick.Joystick(event.device_index)
                 iid = joy.get_instance_id()
-                #------
-                #if the controller is wireless, YOU DONT WANT THIS IF STATEMENT
-                #------
-                #if(joy.get_axis(5) != 0.0):
+
+                # if the controller is wireless, YOU DONT WANT THIS IF STATEMENT
+                # @Andrew
+                # if(joy.get_axis(5) != 0.0):
                 self.joysticks[iid] = joy
                 widget = JoystickWidget(joy)
                 self.joy_widgets[iid] = widget
                 self.scroll_layout.addWidget(widget)
                 print(f"Joystick {iid} connected: {joy.get_name()}")
-                    
+                
 
             elif event.type == pygame.JOYDEVICEREMOVED:
                 iid = event.instance_id

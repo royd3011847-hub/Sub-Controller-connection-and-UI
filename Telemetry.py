@@ -1,20 +1,12 @@
 from header import *
 
 
-# ─────────────────────────────────────────────
-#  BACKGROUND POLLING WORKER
-# ─────────────────────────────────────────────
+# Background Pulling worker
 class TelemetryWorker(QThread):
     data_received  = pyqtSignal(dict)
     error_occurred = pyqtSignal(str)
 
     def __init__(self, get_url_fn, interval: float = 0.1):
-        """
-        get_url_fn : callable – returns the current base URL string.
-                     Using a callable means URL changes (after CONNECT)
-                     are picked up automatically without restarting the thread.
-        interval   : polling period in seconds (default 100 ms).
-        """
         super().__init__()
         self._get_url  = get_url_fn
         self._interval = interval
@@ -29,7 +21,6 @@ class TelemetryWorker(QThread):
                     self.data_received.emit(resp.json())
             except requests.exceptions.RequestException as e:
                 self.error_occurred.emit(str(e))
-
             # Sleep in small ticks so stop() is responsive
             elapsed = 0.0
             tick    = 0.05
@@ -42,9 +33,8 @@ class TelemetryWorker(QThread):
         self.wait()
 
 
-# ─────────────────────────────────────────────
 #  IMU TELEMETRY DISPLAY
-# ─────────────────────────────────────────────
+
 IMU_FIELDS = [
     ("POSITION",  [("X",      "x"),      ("Y",      "y"),      ("Z",      "z")]),
     ("VELOCITY",  [("VX",     "vx"),     ("VY",     "vy"),     ("VZ",     "vz")]),
@@ -59,38 +49,26 @@ class TelemetryDisplay(QGroupBox):
         self._labels: dict[str, QLabel] = {}
         self.get_url = get_url
         self._build_ui()
-        self.running = True
-
         # Start the background polling thread only if a URL provider was given
         self._worker = None
         if callable(self.get_url):
             self._start_worker()
 
-    # ── WORKER LIFECYCLE ─────────────────────
     def _start_worker(self):
         self._worker = TelemetryWorker(self.get_url)
         self._worker.data_received.connect(self.update_values)
-        self._worker.error_occurred.connect(self._on_error)
+        self._worker.error_occurred.connect(lambda err: print(f"Telemetry worker error: {err}"))
         self._worker.start()
 
     def set_url_provider(self, get_url_fn):
-        """Call this after construction if get_url wasn't available at init time
-        (e.g. when wiring up from SubmarineController after _build_ui)."""
         self.get_url = get_url_fn
         if self._worker is None:
             self._start_worker()
 
     def stop_worker(self):
-        """Call from the parent window's closeEvent."""
-        if self._worker and self._worker.isRunning():
+        if self._worker:
             self._worker.stop()
 
-    def _on_error(self, msg: str):
-        # Silently swallow connection errors – the log panel in main handles them
-        # if you want to surface them, emit a signal here instead.
-        pass
-
-    # ── UI BUILD ─────────────────────────────
     def _build_ui(self):
         self.setMinimumHeight(240)
         layout = QVBoxLayout(self)

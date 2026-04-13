@@ -5,6 +5,8 @@ COMMANDS = [
     "clear",
     "start telemetry (tel)",
     "stop telemetry (-tel)",
+    "start boxes (box)",
+    "stop boxes (-box)"
 ]
 
 class CommandPanel(QGroupBox):
